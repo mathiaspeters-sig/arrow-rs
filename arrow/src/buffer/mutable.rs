@@ -654,6 +654,8 @@ impl std::iter::FromIterator<bool> for MutableBuffer {
 
 #[cfg(test)]
 mod tests {
+    use crate::{array::Array, util::bench_util::create_string_array};
+
     use super::*;
 
     #[test]
@@ -787,5 +789,39 @@ mod tests {
 
         buffer.shrink_to_fit();
         assert!(buffer.capacity() >= 64 && buffer.capacity() < 128);
+    }
+
+    #[test]
+    fn test_bench_buffers() {
+        let arrays = vec![
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+            create_string_array::<i32>(4096, 0.5),
+        ];
+        let buffers = arrays
+            .iter()
+            .map(|a| &a.data_ref().buffers()[0])
+            .collect::<Vec<_>>();
+        let mut mutable = MutableBuffer::new(0);
+        for i in 0..arrays.len() {
+            mutable.extend_from_slice(buffers[i])
+        }
+        let _ = mutable.freeze();
     }
 }
