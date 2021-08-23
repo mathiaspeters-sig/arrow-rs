@@ -19,41 +19,39 @@
 extern crate criterion;
 use criterion::Criterion;
 
-use rand::Rng;
-
 extern crate arrow;
 
-use arrow::util::test_util::seedable_rng;
 use arrow::{array::*, util::bench_util::create_string_array};
 
-fn create_slices(size: usize) -> Vec<(usize, usize)> {
-    let rng = &mut seedable_rng();
-
-    (0..size)
-        .map(|_| {
-            let start = rng.gen_range(0..size / 2);
-            let end = rng.gen_range(start + 1..size);
-            (start, end)
-        })
-        .collect()
-}
-
-fn bench<T: Array>(v1: &T, slices: &[(usize, usize)]) {
-    let mut mutable = MutableArrayData::new(vec![v1.data_ref()], false, 5);
-    for (start, end) in slices {
-        mutable.extend(0, *start, *end)
-    }
+fn bench_multiple<T: Array>(arrays: &Vec<T>) {
+    let array_data = arrays
+        .iter()
+        .map(|a| a.data_ref())
+        .collect::<Vec<&ArrayData>>();
+    let capacity = array_data.iter().map(|data| data.len()).sum();
+    let mut mutable = MutableArrayData::new(array_data.clone(), false, capacity);
+    array_data
+        .iter()
+        .enumerate()
+        .for_each(|(i, data)| mutable.extend(i, 0, data.len()));
     mutable.freeze();
 }
 
 fn add_benchmark(c: &mut Criterion) {
-    let v1 = create_string_array::<i32>(1024, 0.0);
-    let v2 = create_slices(1024);
-    c.bench_function("mutable str 1024", |b| b.iter(|| bench(&v1, &v2)));
-
-    let v1 = create_string_array::<i32>(1024, 0.5);
-    let v2 = create_slices(1024);
-    c.bench_function("mutable str nulls 1024", |b| b.iter(|| bench(&v1, &v2)));
+    let arrays = vec![
+        create_string_array::<i32>(1024, 0.5),
+        create_string_array::<i32>(1024, 0.5),
+        create_string_array::<i32>(1024, 0.5),
+        create_string_array::<i32>(1024, 0.5),
+        create_string_array::<i32>(1024, 0.5),
+        create_string_array::<i32>(1024, 0.5),
+        create_string_array::<i32>(1024, 0.5),
+        create_string_array::<i32>(1024, 0.5),
+        create_string_array::<i32>(1024, 0.5),
+    ];
+    c.bench_function("mutable str multiple 1024", |b| {
+        b.iter(|| bench_multiple(&arrays))
+    });
 }
 
 criterion_group!(benches, add_benchmark);
