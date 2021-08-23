@@ -23,6 +23,7 @@ use crate::{array::ArrayData, datatypes::ArrowNativeType};
 use super::{Extend, _MutableArrayData};
 
 pub(super) fn build_extend<T: ArrowNativeType>(array: &ArrayData) -> Extend {
+    // here
     let values = array.buffer::<T>(0);
     Box::new(
         move |mutable: &mut _MutableArrayData, _, start: usize, len: usize| {
