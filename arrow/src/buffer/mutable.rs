@@ -793,6 +793,12 @@ mod tests {
 
     #[test]
     fn test_bench_buffers() {
+        for _ in 0..10000 {
+            bench_buffers_helper();
+        }
+    }
+
+    fn bench_buffers_helper() {
         let arrays = vec![
             create_string_array::<i32>(4096, 0.5),
             create_string_array::<i32>(4096, 0.5),
