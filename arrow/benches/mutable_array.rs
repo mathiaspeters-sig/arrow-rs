@@ -21,7 +21,7 @@ use criterion::Criterion;
 
 extern crate arrow;
 
-use arrow::{array::*, util::bench_util::create_string_array};
+use arrow::{array::*, buffer::MutableBuffer, util::bench_util::create_string_array};
 
 fn bench_multiple<T: Array>(arrays: &Vec<T>) {
     let array_data = arrays
@@ -37,6 +37,18 @@ fn bench_multiple<T: Array>(arrays: &Vec<T>) {
     mutable.freeze();
 }
 
+fn bench_buffer<T: Array>(arrays: &Vec<T>) {
+    let buffers = arrays
+        .iter()
+        .map(|a| &a.data_ref().buffers()[0])
+        .collect::<Vec<_>>();
+    let mut mutable = MutableBuffer::new(0);
+    for i in 0..arrays.len() {
+        mutable.extend_from_slice(buffers[i])
+    }
+    let _ = mutable.freeze();
+}
+
 fn add_benchmark(c: &mut Criterion) {
     let arrays = vec![
         create_string_array::<i32>(1024, 0.5),
@@ -50,7 +62,7 @@ fn add_benchmark(c: &mut Criterion) {
         create_string_array::<i32>(1024, 0.5),
     ];
     c.bench_function("mutable str multiple 1024", |b| {
-        b.iter(|| bench_multiple(&arrays))
+        b.iter(|| bench_buffer(&arrays))
     });
 }
 
