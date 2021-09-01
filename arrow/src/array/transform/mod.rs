@@ -93,29 +93,34 @@ impl<'a> _MutableArrayData<'a> {
 }
 
 fn build_extend_null_bits(array: &ArrayData, use_nulls: bool) -> ExtendNullBits {
-    if let Some(bitmap) = array.null_bitmap() {
-        let bytes = bitmap.bits.as_slice();
-        Box::new(move |mutable, start, len| {
-            utils::resize_for_bits(&mut mutable.null_buffer, mutable.len + len);
-            mutable.null_count += utils::set_bits(
-                mutable.null_buffer.as_slice_mut(),
-                bytes,
-                mutable.len,
-                array.offset() + start,
-                len,
-            );
-        })
-    } else if use_nulls {
-        Box::new(|mutable, _, len| {
-            utils::resize_for_bits(&mut mutable.null_buffer, mutable.len + len);
-            let write_data = mutable.null_buffer.as_slice_mut();
-            let offset = mutable.len;
-            (0..len).for_each(|i| {
-                bit_util::set_bit(write_data, offset + i);
-            });
-        })
-    } else {
-        Box::new(|_, _, _| {})
+    match array.null_bitmap() {
+        Some(bitmap) if array.null_count() > 0 => {
+            let bytes = bitmap.bits.as_slice();
+            Box::new(move |mutable, start, len| {
+                utils::resize_for_bits(&mut mutable.null_buffer, mutable.len + len);
+                mutable.null_count += utils::set_bits(
+                    mutable.null_buffer.as_slice_mut(),
+                    bytes,
+                    mutable.len,
+                    array.offset() + start,
+                    len,
+                );
+            })
+        }
+        _ => {
+            if use_nulls {
+                Box::new(|mutable, _, len| {
+                    utils::resize_for_bits(&mut mutable.null_buffer, mutable.len + len);
+                    let write_data = mutable.null_buffer.as_slice_mut();
+                    let offset = mutable.len;
+                    (0..len).for_each(|i| {
+                        bit_util::set_bit(write_data, offset + i);
+                    });
+                })
+            } else {
+                Box::new(|_, _, _| {})
+            }
+        }
     }
 }
 
